@@ -45,6 +45,7 @@ mkdir -p "$APP_BUNDLE/Contents/Resources"
 
 cp "$EXECUTABLE" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 cp "$RESOURCES_DIR/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
+cp "$RESOURCES_DIR/DockToggle.icns" "$APP_BUNDLE/Contents/Resources/DockToggle.icns"
 
 echo -n 'APPL????' > "$APP_BUNDLE/Contents/PkgInfo"
 
