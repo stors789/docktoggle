@@ -7,6 +7,10 @@
   <a href="README_CN.md"><img src="https://img.shields.io/badge/readme-%E4%B8%AD%E6%96%87%20%7C%20Chinese-red?style=flat-square" alt="中文文档"></a>
 </p>
 
+<p align="center">
+  <img src="icon.png" width="128" alt="DockToggle Icon">
+</p>
+
 # DockToggle
 
 Turn your Dock into a toggle switch. Click a running app's icon to focus it &mdash; click it again to **hide** or **minimize**.

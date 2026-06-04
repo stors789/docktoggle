@@ -7,6 +7,10 @@
   <a href="README.md"><img src="https://img.shields.io/badge/readme-English-blue?style=flat-square" alt="English Docs"></a>
 </p>
 
+<p align="center">
+  <img src="icon.png" width="128" alt="DockToggle 图标">
+</p>
+
 # DockToggle
 
 把你的 Dock 变成开关：点击运行中 App 的图标来聚焦，再点一次**隐藏**或**最小化**。
