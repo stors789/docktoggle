@@ -245,26 +245,116 @@ final class DockInspector {
             return (bundleID, pid)
         }
 
-        // Strategy B: AXTitle fallback
-        var axTitle: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(
-            dockItem,
-            "AXTitle" as CFString,
-            &axTitle
-        ) == .success,
-              let title = axTitle as? String
-        else {
-            log.warning("extractApp: no AXURL or AXTitle")
-            return (nil, nil)
+        // Strategy B: AXTitle fallback (exact match)
+        let axTitleVal = getAXTitle(from: dockItem)
+        if let title = axTitleVal {
+            if let pid = pidByTitle(title) {
+                log.info("extractApp (title): \(title), pid=\(pid)")
+                return (nil, pid)
+            }
         }
 
-        if let app = NSWorkspace.shared.runningApplications
-            .first(where: { $0.localizedName == title })
-        {
-            log.info("extractApp (title): \(title), pid=\(app.processIdentifier)")
-            return (app.bundleIdentifier, app.processIdentifier)
+        // Strategy C: AXURL path → parse app name from path and match
+        if let urlStr = axURL as? String,
+           let pid = pidByParsingAXURL(urlStr) {
+            log.info("extractApp (url-path): pid=\(pid)")
+            return (nil, pid)
         }
-        log.warning("extractApp: no running app for title=\(title)")
+
+        // Strategy D: Fuzzy AXTitle matching
+        if let title = axTitleVal,
+           let pid = pidByTitleFuzzy(title) {
+            log.info("extractApp (title-fuzzy): \(title), pid=\(pid)")
+            return (nil, pid)
+        }
+
+        // Strategy E: Sub-element PID
+        if let pid = pidFromSubElements(of: dockItem) {
+            log.info("extractApp (sub-element): pid=\(pid)")
+            return (nil, pid)
+        }
+
+        log.warning("extractApp: no PID found via any strategy")
         return (nil, nil)
+    }
+
+    // MARK: - PID extraction helpers
+
+    private func getAXTitle(from element: AXUIElement) -> String? {
+        var axTitle: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, "AXTitle" as CFString, &axTitle) == .success,
+              let title = axTitle as? String
+        else { return nil }
+        return title
+    }
+
+    private func pidByTitle(_ title: String) -> pid_t? {
+        return NSWorkspace.shared.runningApplications
+            .first(where: { $0.localizedName == title })?
+            .processIdentifier
+    }
+
+    private func pidByParsingAXURL(_ urlStr: String) -> pid_t? {
+        guard let url = URL(string: urlStr) else { return nil }
+        var path = url.path
+
+        if path.hasSuffix("/") { path.removeLast() }
+
+        let appName: String
+        if path.hasSuffix(".app") {
+            appName = URL(fileURLWithPath: path).deletingPathExtension().lastPathComponent
+        } else {
+            appName = URL(fileURLWithPath: path).lastPathComponent
+        }
+
+        return NSWorkspace.shared.runningApplications
+            .first(where: { $0.localizedName == appName })?
+            .processIdentifier
+    }
+
+    private func pidByTitleFuzzy(_ title: String) -> pid_t? {
+        let runningApps = NSWorkspace.shared.runningApplications
+
+        if let app = runningApps.first(where: {
+            $0.localizedName?.replacingOccurrences(of: ".app", with: "") == title
+        }) {
+            return app.processIdentifier
+        }
+
+        if let app = runningApps.first(where: {
+            $0.localizedName?.caseInsensitiveCompare(title) == .orderedSame
+        }) {
+            return app.processIdentifier
+        }
+
+        if let app = runningApps.first(where: {
+            guard let name = $0.localizedName else { return false }
+            return name.contains(title) || title.contains(name)
+        }) {
+            return app.processIdentifier
+        }
+
+        return nil
+    }
+
+    private func pidFromSubElements(of element: AXUIElement) -> pid_t? {
+        var children: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, "AXChildren" as CFString, &children) == .success,
+              let childrenArray = children as? [AXUIElement]
+        else { return nil }
+
+        for child in childrenArray {
+            var childPID: pid_t = 0
+            if AXUIElementGetPid(child, &childPID) == .success,
+               childPID != 0,
+               childPID != NSRunningApplication.runningApplications(
+                withBundleIdentifier: "com.apple.dock"
+               ).first?.processIdentifier
+            {
+                return childPID
+            }
+        }
+
+        return nil
     }
 }
