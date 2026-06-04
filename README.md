@@ -3,6 +3,8 @@
   <img src="https://img.shields.io/badge/arch-arm64%20%7C%20x86__64-brightgreen" alt="Architecture">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
   <img src="https://img.shields.io/badge/built%20by-DeepSeek%20v4%20Pro%20%2B%20OpenCode-purple" alt="Built by">
+  <br>
+  <a href="README_CN.md"><img src="https://img.shields.io/badge/readme-%E4%B8%AD%E6%96%87%20%7C%20Chinese-red?style=flat-square" alt="中文文档"></a>
 </p>
 
 # DockToggle
