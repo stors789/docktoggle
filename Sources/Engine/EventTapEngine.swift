@@ -90,34 +90,37 @@ final class EventTapEngine {
         let rawMode = UserDefaults.standard.string(forKey: "behaviorMode") ?? "hide"
         let mode = BehaviorMode(rawValue: rawMode) ?? .hide
 
-        let targetName = NSRunningApplication(processIdentifier: targetPID)?
-            .localizedName ?? "?"
-        let frontmostName = NSRunningApplication(processIdentifier: capturedFrontmostPID)?
-            .localizedName ?? "?"
+        // Resolve bundle IDs for multi-process matching
+        let targetApp = NSRunningApplication(processIdentifier: targetPID)
+        let frontmostApp = NSRunningApplication(processIdentifier: capturedFrontmostPID)
+        let targetBundleID = targetApp?.bundleIdentifier
+        let frontmostBundleID = frontmostApp?.bundleIdentifier
+        let targetName = targetApp?.localizedName ?? "?"
+        let frontmostName = frontmostApp?.localizedName ?? "?"
 
         DebugLog.shared.write("[TAP] mouseDown@(\(Int(point.x)),\(Int(point.y))) frontmost=\(capturedFrontmostPID)(\(frontmostName)) target=\(targetPID)(\(targetName)) mode=\(rawMode)")
 
-        // Debounce: if Dock is restoring this PID, stay out of the way
+        // Debounce
         if ActionExecutor.shared.isRestoring(pid: targetPID) {
             DebugLog.shared.write("[TAP] debounce — pass through for PID \(targetPID)")
             return Unmanaged.passUnretained(event)
         }
 
-        // When cached frontmost doesn't match, try a live check
-        // to handle race conditions where didActivateApplicationNotification
-        // hasn't been processed yet on the main queue.
+        // Live frontmost check (handles notification race condition)
         if targetPID != capturedFrontmostPID {
             let livePID = NSWorkspace.shared.frontmostApplication?.processIdentifier ?? 0
             if livePID == targetPID {
                 let liveName = NSWorkspace.shared.frontmostApplication?.localizedName ?? "?"
-                DebugLog.shared.write("[TAP] live check overrode frontmost: \(capturedFrontmostPID)(\(frontmostName)) -> \(livePID)(\(liveName))")
+                DebugLog.shared.write("[TAP] live check overrode frontmost: \(capturedFrontmostPID) -> \(livePID)(\(liveName))")
                 capturedFrontmostPID = livePID
             }
         }
 
-        // Toggle: target is frontmost → hide or minimize.
-        // Also debounce to prevent immediate re-toggle after state change.
-        if targetPID == capturedFrontmostPID {
+        // Match by PID or bundle ID (handles multi-process apps like 快捷指令)
+        let isSameApp = targetPID == capturedFrontmostPID ||
+            (targetBundleID != nil && targetBundleID == frontmostBundleID)
+
+        if isSameApp {
             shouldSwallowNextMouseUp = true
             ActionExecutor.shared.markRestoring(pid: targetPID)
             DebugLog.shared.write("[TAP] SWALLOW + execute \(rawMode) on PID \(targetPID)")
@@ -127,8 +130,7 @@ final class EventTapEngine {
             return nil
         }
 
-        // Not frontmost → pass through to Dock. Debounce to prevent
-        // rapid follow-up clicks from immediately re-toggling after restore.
+        // Not frontmost → pass through
         ActionExecutor.shared.markRestoring(pid: targetPID)
         DebugLog.shared.write("[TAP] pass through (not frontmost) + debounce PID \(targetPID)")
         return Unmanaged.passUnretained(event)

@@ -40,8 +40,14 @@ final class ActionExecutor {
     }
 
     private func executeHide(pid: pid_t) {
-        guard let app = NSRunningApplication(processIdentifier: pid) else { return }
-        app.hide()
+        guard let app = NSRunningApplication(processIdentifier: pid) else {
+            DebugLog.shared.write("[HIDE] no running app for PID \(pid)")
+            return
+        }
+        let name = app.localizedName ?? "?"
+        DebugLog.shared.write("[HIDE] hiding \(name) (PID \(pid))")
+        let result = app.hide()
+        DebugLog.shared.write("[HIDE] hide() returned \(result) for PID \(pid)")
     }
 
     private func restoreAnyMinimizedWindow(pid: pid_t) -> Bool {
