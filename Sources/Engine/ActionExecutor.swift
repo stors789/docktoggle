@@ -112,14 +112,22 @@ final class ActionExecutor {
                 DebugLog.shared.write("[MINIMIZE] pressed AXMinimizeButton for PID \(pid)")
                 return
             }
+            DebugLog.shared.write("[MINIMIZE] AXMinimizeButton press failed: \(result.rawValue)")
         }
 
         // Strategy B: fallback to AXMinimized attribute
-        AXUIElementSetAttributeValue(
+        let setResult = AXUIElementSetAttributeValue(
             windowElement,
             "AXMinimized" as CFString,
             true as CFBoolean
         )
-        DebugLog.shared.write("[MINIMIZE] set AXMinimized=true for PID \(pid)")
+        if setResult == .success {
+            DebugLog.shared.write("[MINIMIZE] set AXMinimized=true for PID \(pid)")
+            return
+        }
+        DebugLog.shared.write("[MINIMIZE] set AXMinimized failed: \(setResult.rawValue) - fallback to hide")
+
+        // Strategy C: minimize failed, fallback to hide
+        executeHide(pid: pid)
     }
 }
