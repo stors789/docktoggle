@@ -116,16 +116,24 @@ final class EventTapEngine {
             }
         }
 
-        // Match by PID or bundle ID (handles multi-process apps like 快捷指令)
+        // Match by PID, bundle ID, or localized name (handles multi-process apps like 快捷指令)
         let isSameApp = targetPID == capturedFrontmostPID ||
-            (targetBundleID != nil && targetBundleID == frontmostBundleID)
+            (targetBundleID != nil && targetBundleID == frontmostBundleID) ||
+            (targetApp?.localizedName != nil && targetApp?.localizedName == frontmostApp?.localizedName)
+
+        if !isSameApp {
+            DebugLog.shared.write("[TAP] mismatch: pid(\(targetPID)!=\(capturedFrontmostPID)) bundle(\(targetBundleID ?? "nil")!=\(frontmostBundleID ?? "nil")) name(\(targetName)!=\(frontmostName))")
+        }
 
         if isSameApp {
+            // Use the frontmost PID for actions (has the visible windows),
+            // but debounce the cache PID (which is what DockIconCache returns)
+            let actionPID = capturedFrontmostPID
             shouldSwallowNextMouseUp = true
             ActionExecutor.shared.markRestoring(pid: targetPID)
-            DebugLog.shared.write("[TAP] SWALLOW + execute \(rawMode) on PID \(targetPID)")
+            DebugLog.shared.write("[TAP] SWALLOW + execute \(rawMode) on actionPID=\(actionPID) (cache target=\(targetPID))")
             DispatchQueue.main.async {
-                ActionExecutor.shared.execute(targetPID: targetPID, mode: mode)
+                ActionExecutor.shared.execute(targetPID: actionPID, mode: mode)
             }
             return nil
         }
