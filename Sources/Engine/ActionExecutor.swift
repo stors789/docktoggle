@@ -122,10 +122,18 @@ final class ActionExecutor {
             true as CFBoolean
         )
         if setResult == .success {
-            DebugLog.shared.write("[MINIMIZE] set AXMinimized=true for PID \(pid)")
-            return
+            // Verify it actually got minimized (some windows accept the call but ignore it)
+            Thread.sleep(forTimeInterval: 0.1)
+            var checkVal: CFTypeRef?
+            if AXUIElementCopyAttributeValue(windowElement, "AXMinimized" as CFString, &checkVal) == .success,
+               let isNowMinimized = checkVal as? Bool, isNowMinimized {
+                DebugLog.shared.write("[MINIMIZE] set AXMinimized=true verified for PID \(pid)")
+                return
+            }
+            DebugLog.shared.write("[MINIMIZE] set AXMinimized returned success but window not minimized - fallback to hide")
+        } else {
+            DebugLog.shared.write("[MINIMIZE] set AXMinimized failed: \(setResult.rawValue) - fallback to hide")
         }
-        DebugLog.shared.write("[MINIMIZE] set AXMinimized failed: \(setResult.rawValue) - fallback to hide")
 
         // Strategy C: minimize failed, fallback to hide
         executeHide(pid: pid)
