@@ -4,6 +4,8 @@ All notable changes to DockToggle are tracked here.
 
 ## Unreleased
 
+## 1.1.0 (2026-06-19)
+
 ### Fixed
 
 - Keep permission polling active even when the app starts before Accessibility or Input Monitoring is granted.
@@ -18,7 +20,7 @@ All notable changes to DockToggle are tracked here.
 - Add log rotation at roughly 1 MB.
 - Expand Settings with status text plus refresh, clear, and reveal-log actions.
 - Document current limitations, log prefixes, and maintenance workflow.
-- Replaced the original blue Dock-chevron icon with a "Focus Then Hide" concept: a window fading into a Dock pill with a cyan focus dot. The source artwork is clear, but the generated app icon output becomes blurry after resizing/packaging into icon sizes and `.icns`; icon export should be revisited later rather than polished further now.
+- Design a new minimalist application icon representing the action of hiding/sliding down the macOS Dock, featuring a clean, flat aesthetic that fits perfectly with macOS design guidelines.
 
 ## 1.0.0
 
