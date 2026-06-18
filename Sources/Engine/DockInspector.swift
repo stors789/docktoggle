@@ -82,28 +82,52 @@ final class DockInspector {
         if let screen = NSScreen.main {
             let sf = screen.frame
             let vf = screen.visibleFrame
-
-            let bottomH = sf.maxY - vf.maxY
-            let leftW = vf.minX - sf.minX
-            let rightW = sf.maxX - vf.maxX
-            let topH = vf.minY - sf.minY
-
-            var dockRect: CGRect?
-
-            if bottomH > 0 {
-                dockRect = CGRect(x: sf.origin.x, y: sf.origin.y, width: sf.width, height: bottomH)
-            } else if leftW > 0 {
-                dockRect = CGRect(x: sf.origin.x, y: sf.origin.y, width: leftW, height: sf.height)
-            } else if rightW > 0 {
-                dockRect = CGRect(x: vf.maxX, y: sf.origin.y, width: rightW, height: sf.height)
-            } else if topH > 0 {
-                dockRect = CGRect(x: sf.origin.x, y: vf.maxY, width: sf.width, height: topH)
+            
+            let cgScreenFrame = convertToCG(sf)
+            let cgVisibleFrame = convertToCG(vf)
+            
+            let dockDefaults = UserDefaults(suiteName: "com.apple.dock")
+            let orientation = dockDefaults?.string(forKey: "orientation") ?? "bottom"
+            let autohide = dockDefaults?.bool(forKey: "autohide") ?? false
+            
+            var dockRect = CGRect.zero
+            
+            if autohide {
+                // In autohide mode, visibleFrame == screen.frame.
+                // We define a default 100px thick zone along the appropriate edge.
+                let thickness: CGFloat = 100
+                switch orientation {
+                case "bottom":
+                    dockRect = CGRect(x: cgScreenFrame.origin.x, y: cgScreenFrame.maxY - thickness, width: cgScreenFrame.width, height: thickness)
+                case "left":
+                    dockRect = CGRect(x: cgScreenFrame.origin.x, y: cgScreenFrame.origin.y, width: thickness, height: cgScreenFrame.height)
+                case "right":
+                    dockRect = CGRect(x: cgScreenFrame.maxX - thickness, y: cgScreenFrame.origin.y, width: thickness, height: cgScreenFrame.height)
+                default:
+                    dockRect = CGRect(x: cgScreenFrame.origin.x, y: cgScreenFrame.maxY - thickness, width: cgScreenFrame.width, height: thickness)
+                }
+            } else {
+                // Non-autohide: calculate based on visibleFrame difference in CoreGraphics coordinates
+                let bottomH = cgScreenFrame.maxY - cgVisibleFrame.maxY
+                let leftW = cgVisibleFrame.minX - cgScreenFrame.minX
+                let rightW = cgScreenFrame.maxX - cgVisibleFrame.maxX
+                let topH = cgVisibleFrame.minY - cgScreenFrame.minY
+                
+                if bottomH > 0 {
+                    dockRect = CGRect(x: cgScreenFrame.origin.x, y: cgVisibleFrame.maxY, width: cgScreenFrame.width, height: bottomH)
+                } else if leftW > 0 {
+                    dockRect = CGRect(x: cgScreenFrame.origin.x, y: cgScreenFrame.origin.y, width: leftW, height: cgScreenFrame.height)
+                } else if rightW > 0 {
+                    dockRect = CGRect(x: cgVisibleFrame.maxX, y: cgScreenFrame.origin.y, width: rightW, height: cgScreenFrame.height)
+                } else if topH > 0 {
+                    dockRect = CGRect(x: cgScreenFrame.origin.x, y: cgScreenFrame.origin.y, width: cgScreenFrame.width, height: topH)
+                }
             }
 
-            if let dockRect, !dockRect.isEmpty {
+            if !dockRect.isEmpty {
                 frameQueue.async(flags: .barrier) { self._cachedFrame = dockRect }
                 log.info("Dock frame (screen calc): \(String(describing: dockRect))")
-                DebugLog.shared.write("[DOCK] screen calc: sf=\(sf) vf=\(vf) -> dock=\(dockRect)")
+                DebugLog.shared.write("[DOCK] screen calc: cgScreen=\(cgScreenFrame) cgVisible=\(cgVisibleFrame) -> dock=\(dockRect)")
                 return
             }
         }
@@ -115,9 +139,10 @@ final class DockInspector {
         var value: CFTypeRef?
         guard AXUIElementCopyAttributeValue(element,
                 "AXFrame" as CFString, &value) == .success,
-              let axValue = value as! AXValue?,
-              AXValueGetType(axValue) == .cgRect
+              let rawValue = value
         else { return nil }
+        let axValue = rawValue as! AXValue
+        guard AXValueGetType(axValue) == .cgRect else { return nil }
         var rect = CGRect.zero
         AXValueGetValue(axValue, .cgRect, &rect)
         return rect
@@ -128,11 +153,16 @@ final class DockInspector {
         var sizeValue: CFTypeRef?
         guard AXUIElementCopyAttributeValue(element,
                 "AXPosition" as CFString, &posValue) == .success,
-              let posAX = posValue as! AXValue?,
-              AXValueGetType(posAX) == .cgPoint,
+              let rawPos = posValue,
               AXUIElementCopyAttributeValue(element,
                 "AXSize" as CFString, &sizeValue) == .success,
-              let sizeAX = sizeValue as! AXValue?,
+              let rawSize = sizeValue
+        else { return nil }
+
+        let posAX = rawPos as! AXValue
+        let sizeAX = rawSize as! AXValue
+
+        guard AXValueGetType(posAX) == .cgPoint,
               AXValueGetType(sizeAX) == .cgSize
         else { return nil }
 
@@ -187,7 +217,7 @@ final class DockInspector {
             return (nil, nil)
         }
 
-        let result = extractApp(from: dockItem)
+        let result = DockAppExtractor.extractApp(from: dockItem)
         DebugLog.shared.write("[DOCK] extractApp: bundleID=\(result.bundleID ?? "nil"), pid=\(result.pid ?? 0)")
         return result
     }
@@ -214,8 +244,9 @@ final class DockInspector {
                 "AXParent" as CFString,
                 &parentValue
             ) == .success,
-                  let parent = parentValue as! AXUIElement?
+                  let rawParent = parentValue
             else { return nil }
+            let parent = rawParent as! AXUIElement
             current = parent
         }
         return nil
@@ -225,136 +256,44 @@ final class DockInspector {
         role.lowercased().contains("dockitem")
     }
 
-    private func extractApp(from dockItem: AXUIElement) -> (bundleID: String?, pid: pid_t?) {
-        // Strategy A: AXURL
-        var axURL: CFTypeRef?
-        if AXUIElementCopyAttributeValue(
-            dockItem,
-            "AXURL" as CFString,
-            &axURL
-        ) == .success,
-           let urlStr = axURL as? String,
-           let url = URL(string: urlStr),
-           let bundle = Bundle(url: url),
-           let bundleID = bundle.bundleIdentifier
-        {
-            let pid = NSWorkspace.shared.runningApplications
-                .first(where: { $0.bundleIdentifier == bundleID })?
-                .processIdentifier
-            log.info("extractApp (URL): bundleID=\(bundleID), pid=\(pid ?? 0)")
-            return (bundleID, pid)
-        }
-
-        // Strategy B: AXTitle fallback (exact match)
-        let axTitleVal = getAXTitle(from: dockItem)
-        if let title = axTitleVal {
-            if let pid = pidByTitle(title) {
-                log.info("extractApp (title): \(title), pid=\(pid)")
-                return (nil, pid)
-            }
-        }
-
-        // Strategy C: AXURL path → parse app name from path and match
-        if let urlStr = axURL as? String,
-           let pid = pidByParsingAXURL(urlStr) {
-            log.info("extractApp (url-path): pid=\(pid)")
-            return (nil, pid)
-        }
-
-        // Strategy D: Fuzzy AXTitle matching
-        if let title = axTitleVal,
-           let pid = pidByTitleFuzzy(title) {
-            log.info("extractApp (title-fuzzy): \(title), pid=\(pid)")
-            return (nil, pid)
-        }
-
-        // Strategy E: Sub-element PID
-        if let pid = pidFromSubElements(of: dockItem) {
-            log.info("extractApp (sub-element): pid=\(pid)")
-            return (nil, pid)
-        }
-
-        log.warning("extractApp: no PID found via any strategy")
-        return (nil, nil)
+    private func convertToCG(_ rect: NSRect) -> CGRect {
+        guard let primaryScreen = NSScreen.screens.first else { return rect }
+        let primaryHeight = primaryScreen.frame.height
+        return CGRect(
+            x: rect.origin.x,
+            y: primaryHeight - rect.origin.y - rect.size.height,
+            width: rect.size.width,
+            height: rect.size.height
+        )
     }
 
-    // MARK: - PID extraction helpers
-
-    private func getAXTitle(from element: AXUIElement) -> String? {
-        var axTitle: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, "AXTitle" as CFString, &axTitle) == .success,
-              let title = axTitle as? String
-        else { return nil }
-        return title
-    }
-
-    private func pidByTitle(_ title: String) -> pid_t? {
-        return NSWorkspace.shared.runningApplications
-            .first(where: { $0.localizedName == title })?
-            .processIdentifier
-    }
-
-    private func pidByParsingAXURL(_ urlStr: String) -> pid_t? {
-        guard let url = URL(string: urlStr) else { return nil }
-        var path = url.path
-
-        if path.hasSuffix("/") { path.removeLast() }
-
-        let appName: String
-        if path.hasSuffix(".app") {
-            appName = URL(fileURLWithPath: path).deletingPathExtension().lastPathComponent
-        } else {
-            appName = URL(fileURLWithPath: path).lastPathComponent
+    func isPointInDockArea(_ point: CGPoint) -> Bool {
+        if let cachedFrame = cachedGlobalDockFrame, cachedFrame.contains(point) {
+            return true
         }
 
-        return NSWorkspace.shared.runningApplications
-            .first(where: { $0.localizedName == appName })?
-            .processIdentifier
-    }
+        let dockDefaults = UserDefaults(suiteName: "com.apple.dock")
+        let orientation = dockDefaults?.string(forKey: "orientation") ?? "bottom"
 
-    private func pidByTitleFuzzy(_ title: String) -> pid_t? {
-        let runningApps = NSWorkspace.shared.runningApplications
-
-        if let app = runningApps.first(where: {
-            $0.localizedName?.replacingOccurrences(of: ".app", with: "") == title
-        }) {
-            return app.processIdentifier
+        guard let screen = NSScreen.screens.first(where: { convertToCG($0.frame).contains(point) }) else {
+            return false
         }
 
-        if let app = runningApps.first(where: {
-            $0.localizedName?.caseInsensitiveCompare(title) == .orderedSame
-        }) {
-            return app.processIdentifier
+        let screenCGFrame = convertToCG(screen.frame)
+        let thickness: CGFloat = 100
+
+        switch orientation {
+        case "bottom":
+            let hotspot = CGRect(x: screenCGFrame.origin.x, y: screenCGFrame.maxY - thickness, width: screenCGFrame.width, height: thickness)
+            return hotspot.contains(point)
+        case "left":
+            let hotspot = CGRect(x: screenCGFrame.origin.x, y: screenCGFrame.origin.y, width: thickness, height: screenCGFrame.height)
+            return hotspot.contains(point)
+        case "right":
+            let hotspot = CGRect(x: screenCGFrame.maxX - thickness, y: screenCGFrame.origin.y, width: thickness, height: screenCGFrame.height)
+            return hotspot.contains(point)
+        default:
+            return false
         }
-
-        if let app = runningApps.first(where: {
-            guard let name = $0.localizedName else { return false }
-            return name.contains(title) || title.contains(name)
-        }) {
-            return app.processIdentifier
-        }
-
-        return nil
-    }
-
-    private func pidFromSubElements(of element: AXUIElement) -> pid_t? {
-        var children: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, "AXChildren" as CFString, &children) == .success,
-              let childrenArray = children as? [AXUIElement]
-        else { return nil }
-
-        for child in childrenArray {
-            var childPID: pid_t = 0
-            if AXUIElementGetPid(child, &childPID) == .success,
-               childPID != 0,
-               childPID != NSRunningApplication.runningApplications(
-                withBundleIdentifier: "com.apple.dock"
-               ).first?.processIdentifier
-            {
-                return childPID
-            }
-        }
-
-        return nil
     }
 }

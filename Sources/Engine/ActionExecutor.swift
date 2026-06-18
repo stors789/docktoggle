@@ -81,7 +81,7 @@ final class ActionExecutor {
             "AXFocusedWindow" as CFString,
             &window
         ) == .success,
-              let windowElement = window as! AXUIElement?
+              let rawWindow = window
         else {
             // No focused window (e.g. just minimized). Try restoring any minimized window.
             DebugLog.shared.write("[MINIMIZE] no focused window for PID \(pid)")
@@ -91,6 +91,8 @@ final class ActionExecutor {
             }
             return
         }
+
+        let windowElement = rawWindow as! AXUIElement
 
         // If focused window is already minimized → restore it (toggle / interrupt)
         var minimized: CFTypeRef?
@@ -111,7 +113,8 @@ final class ActionExecutor {
             "AXMinimizeButton" as CFString,
             &button
         ) == .success,
-           let minimizeButton = button as! AXUIElement? {
+           let rawButton = button {
+            let minimizeButton = rawButton as! AXUIElement
             let result = AXUIElementPerformAction(
                 minimizeButton,
                 kAXPressAction as CFString
@@ -131,14 +134,17 @@ final class ActionExecutor {
         )
         if setResult == .success {
             // Verify it actually got minimized (some windows accept the call but ignore it)
-            Thread.sleep(forTimeInterval: 0.1)
-            var checkVal: CFTypeRef?
-            if AXUIElementCopyAttributeValue(windowElement, "AXMinimized" as CFString, &checkVal) == .success,
-               let isNowMinimized = checkVal as? Bool, isNowMinimized {
-                DebugLog.shared.write("[MINIMIZE] set AXMinimized=true verified for PID \(pid)")
-                return
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                var checkVal: CFTypeRef?
+                if AXUIElementCopyAttributeValue(windowElement, "AXMinimized" as CFString, &checkVal) == .success,
+                   let isNowMinimized = checkVal as? Bool, isNowMinimized {
+                    DebugLog.shared.write("[MINIMIZE] set AXMinimized=true verified for PID \(pid)")
+                    return
+                }
+                DebugLog.shared.write("[MINIMIZE] set AXMinimized returned success but window not minimized - fallback to hide")
+                self?.executeHide(pid: pid)
             }
-            DebugLog.shared.write("[MINIMIZE] set AXMinimized returned success but window not minimized - fallback to hide")
+            return
         } else {
             DebugLog.shared.write("[MINIMIZE] set AXMinimized failed: \(setResult.rawValue) - fallback to hide")
         }

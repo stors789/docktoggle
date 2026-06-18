@@ -15,7 +15,7 @@ final class SettingsWindowManager {
             let hostingView = NSHostingView(rootView: contentView)
 
             window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 380, height: 340),
+                contentRect: NSRect(x: 0, y: 0, width: 540, height: 560),
                 styleMask: [.titled, .closable, .miniaturizable],
                 backing: .buffered,
                 defer: false

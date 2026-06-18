@@ -1,0 +1,6 @@
+{
+  "summary": "DockToggle 项目的全面深度评估研究报告。包含五大部分：\n1. 从相似项目（DockDoor、Click2Minimize、BetterTouchTool）可学习的设计模式与最佳实践\n2. 功耗优化方案 — 识别了 1 秒定时器、CGEvent tap 效率、AX API 调用等 6 个功耗热点，并给出具体优化代码思路\n3. Bug 预防与健壮性改进 — 覆盖线程安全、force unwrap 风险、Event Tap 恢复机制等\n4. 全场景适配 — Stage Manager、多显示器、多 Space、全屏、Dock 自动隐藏、特殊应用等边缘场景\n5. 优先级排序的改进路线图",
+  "updatedAt": "2026-06-18T15:06:59.405596Z",
+  "requestFeedback": true,
+  "userFacing": true
+}

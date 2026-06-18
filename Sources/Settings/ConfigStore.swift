@@ -7,6 +7,8 @@ final class ConfigStore: ObservableObject {
 
     @AppStorage("behaviorMode") var behaviorMode: BehaviorMode = .hide
     @AppStorage("launchAtLogin") var launchAtLogin: Bool = false
+    @AppStorage("triggerModifier") var triggerModifier: String = "None"
+    @AppStorage("excludedBundleIDs") var excludedBundleIDs: String = "com.apple.finder"
 
     private init() {}
 }

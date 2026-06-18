@@ -49,6 +49,8 @@ Turn your Dock into a toggle switch. Click a running app's icon to focus it &mda
 
 DockToggle installs a `CGEvent` tap that intercepts left mouse clicks. When you click inside the Dock area on an already-frontmost app's icon, the click is swallowed and your chosen action (hide or minimize) is executed instead.
 
+DockToggle is intentionally closer to a lightweight Dock enhancement such as HyperDock-style shortcuts than a full Dock replacement such as uBar. It keeps Apple's Dock visible and only changes the repeated-click behavior for the active app.
+
 ### Two Modes
 
 | Mode | Behavior |
@@ -109,7 +111,7 @@ DockToggle needs two permissions — both must be granted for the app to work.
 1. Launch DockToggle — it will show a red "Permissions Needed" badge
 2. Go to **System Settings → Privacy & Security → Accessibility**, toggle DockToggle **ON**
 3. Go to **System Settings → Privacy & Security → Input Monitoring**, toggle DockToggle **ON**
-4. Quit and reopen DockToggle — the status dot should turn green
+4. Keep the Settings window open for a few seconds, or quit and reopen DockToggle — the status dot should turn green
 
 > **Troubleshooting:** If it still doesn't work after granting both, remove DockToggle from both lists, quit the app, then re-add and re-launch.
 
@@ -120,11 +122,12 @@ DockToggle needs two permissions — both must be granted for the app to work.
 ```
 Sources/
 ├── DockToggleApp.swift              # @main entry, menubar UI, lifecycle
-├── DebugLog.swift                   # File-based logging to /tmp/docktoggle.log
+├── DebugLog.swift                   # File-based logging under ~/Library/Logs/DockToggle
 ├── SettingsView.swift               # Settings window content
 ├── SettingsWindowManager.swift      # NSWindow management
 ├── Engine/
 │   ├── EventTapEngine.swift         # Core: CGEvent tap + click interception
+│   ├── DecisionEngine.swift         # Earlier hit-test path kept for comparison
 │   ├── ActionExecutor.swift         # Hide / minimize via AppKit + AX APIs
 │   ├── DockInspector.swift          # Dock process resolution, frame detection
 │   ├── DockIconCache.swift          # Icon position/PID cache (1s refresh)
@@ -144,13 +147,39 @@ Built as a single Swift executable bundled into a `.app` — no Xcode project, n
 
 ## Debugging
 
-Logs are written to `/tmp/docktoggle.log`. You can tail them live:
+Logs are written to `~/Library/Logs/DockToggle/docktoggle.log`. You can tail them live:
 
 ```bash
-tail -f /tmp/docktoggle.log
+tail -f ~/Library/Logs/DockToggle/docktoggle.log
 ```
 
-Or view recent entries from the Settings window within the app.
+The Settings window can also refresh, clear, or reveal the log file in Finder. Logs rotate to `docktoggle.old.log` after roughly 1 MB.
+
+Useful entries:
+
+| Prefix | Meaning |
+|---|---|
+| `[APP]` | App lifecycle, permissions, launch-at-login changes |
+| `[TAP]` | Mouse events and click interception decisions |
+| `[CACHE]` | Dock icon frame/PID cache refreshes |
+| `[DOCK]` | Dock frame and Accessibility hit-test details |
+| `[MINIMIZE]` / `[HIDE]` | Window action execution |
+
+---
+
+## Known Limits
+
+- DockToggle depends on macOS Accessibility metadata. Some apps expose incomplete window information, so minimize mode may fall back to hide.
+- Finder and Dock are ignored as protected targets.
+- Full-screen apps, multiple Spaces, and Stage Manager can still affect which window macOS considers focused.
+- Input Monitoring changes may require restarting the app if macOS does not deliver the permission update immediately.
+
+---
+
+## Maintenance
+
+- Changes are tracked in [CHANGELOG.md](CHANGELOG.md).
+- Near-term work is tracked in [TODO.md](TODO.md).
 
 ---
 

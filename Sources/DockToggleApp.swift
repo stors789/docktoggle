@@ -17,14 +17,20 @@ final class AppController: ObservableObject {
     private var cacheRefreshTimer: Timer?
     private var engineThread: Thread?
 
+    private var launchObserver: NSObjectProtocol?
+    private var terminateObserver: NSObjectProtocol?
+    private var screenObserver: NSObjectProtocol?
+
     private init() {}
 
     func startIfPermitted() {
         DebugLog.shared.write("[APP] startIfPermitted called")
         PermissionsManager.shared.checkPermissions()
+        let granted = PermissionsManager.shared.allGranted
         DebugLog.shared.write("[APP] permissions: ax=\(PermissionsManager.shared.accessibilityGranted) input=\(PermissionsManager.shared.inputMonitoringGranted)")
+        startMonitorTimer(interval: granted ? 30.0 : 2.0)
 
-        if PermissionsManager.shared.allGranted {
+        if granted {
             startEngine()
         } else {
             showPermissionsWarning = true
@@ -76,30 +82,45 @@ final class AppController: ObservableObject {
         statusMessage = "Running"
 
         DockIconCache.shared.refresh()
+        
+        // Setup cache refresh timer (30s fallback/polling)
+        cacheRefreshTimer?.invalidate()
         cacheRefreshTimer = Timer.scheduledTimer(
-            withTimeInterval: 1.0,
+            withTimeInterval: 30.0,
             repeats: true
         ) { _ in
+            DockInspector.shared.refreshFrame()
             DockIconCache.shared.refresh()
         }
 
-        monitorTimer = Timer.scheduledTimer(
-            withTimeInterval: 3.0,
-            repeats: true
-        ) { [weak self] _ in
-            DispatchQueue.main.async {
-                guard let self else { return }
-                if self.isEngineRunning && !EventTapEngine.shared.isTapEnabled {
-                    self.isEngineRunning = false
-                    self.statusMessage = "Event tap disabled"
-                    self.showPermissionsWarning = true
-                }
-                PermissionsManager.shared.checkPermissions()
+        // Setup Workspace notifications for event-driven updates
+        let workspaceCenter = NSWorkspace.shared.notificationCenter
+        launchObserver = workspaceCenter.addObserver(
+            forName: NSWorkspace.didLaunchApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            DebugLog.shared.write("[APP] Application launched, refreshing cache")
+            DockIconCache.shared.refresh()
+        }
 
-                if PermissionsManager.shared.allGranted && !self.isEngineRunning {
-                    self.startEngine()
-                }
-            }
+        terminateObserver = workspaceCenter.addObserver(
+            forName: NSWorkspace.didTerminateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            DebugLog.shared.write("[APP] Application terminated, refreshing cache")
+            DockIconCache.shared.refresh()
+        }
+
+        screenObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            DebugLog.shared.write("[APP] Screen parameters changed, refreshing Dock frame and cache")
+            DockInspector.shared.refreshFrame()
+            DockIconCache.shared.refresh()
         }
     }
 
@@ -107,6 +128,7 @@ final class AppController: ObservableObject {
         if PermissionsManager.shared.allGranted && !isEngineRunning {
             startEngine()
             showPermissionsWarning = false
+            startMonitorTimer(interval: 30.0)
         }
     }
 
@@ -119,10 +141,75 @@ final class AppController: ObservableObject {
         monitorTimer = nil
         cacheRefreshTimer?.invalidate()
         cacheRefreshTimer = nil
+        
+        if let observer = launchObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+            launchObserver = nil
+        }
+        if let observer = terminateObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+            terminateObserver = nil
+        }
+        if let observer = screenObserver {
+            NotificationCenter.default.removeObserver(observer)
+            screenObserver = nil
+        }
+
         EventTapEngine.shared.stop()
         engineThread = nil
         isEngineRunning = false
         statusMessage = "Stopped"
+        DebugLog.shared.flush()
+    }
+
+    func setLaunchAtLogin(_ enabled: Bool) {
+        do {
+            if enabled {
+                try SMAppService.mainApp.register()
+            } else {
+                try SMAppService.mainApp.unregister()
+            }
+            ConfigStore.shared.launchAtLogin = enabled
+            DebugLog.shared.write("[APP] launchAtLogin=\(enabled)")
+        } catch {
+            ConfigStore.shared.launchAtLogin = !enabled
+            statusMessage = "Login item failed"
+            DebugLog.shared.write("[APP] launchAtLogin failed: \(error.localizedDescription)")
+        }
+    }
+
+    private func startMonitorTimer(interval: TimeInterval = 2.0) {
+        monitorTimer?.invalidate()
+        monitorTimer = Timer.scheduledTimer(
+            withTimeInterval: interval,
+            repeats: true
+        ) { [weak self] _ in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                PermissionsManager.shared.checkPermissions()
+                let granted = PermissionsManager.shared.allGranted
+                self.showPermissionsWarning = !granted
+
+                if self.isEngineRunning && !EventTapEngine.shared.isTapEnabled {
+                    self.isEngineRunning = false
+                    self.statusMessage = "Event tap disabled"
+                    self.showPermissionsWarning = true
+                    EventTapEngine.shared.stop()
+                    self.startMonitorTimer(interval: 2.0)
+                    return
+                }
+
+                if granted && !self.isEngineRunning {
+                    self.startEngine()
+                    self.startMonitorTimer(interval: 30.0)
+                } else if !granted {
+                    self.statusMessage = "Permissions needed"
+                    if interval != 2.0 {
+                        self.startMonitorTimer(interval: 2.0)
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -171,12 +258,7 @@ struct DockToggleApp: App {
                 Toggle("Launch at Login", isOn: Binding(
                     get: { ConfigStore.shared.launchAtLogin },
                     set: { newValue in
-                        ConfigStore.shared.launchAtLogin = newValue
-                        if newValue {
-                            try? SMAppService.mainApp.register()
-                        } else {
-                            try? SMAppService.mainApp.unregister()
-                        }
+                        AppController.shared.setLaunchAtLogin(newValue)
                     }
                 ))
 

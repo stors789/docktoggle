@@ -1,17 +1,12 @@
 import SwiftUI
-import ServiceManagement
+import AppKit
 
 struct SettingsView: View {
     @ObservedObject var configStore = ConfigStore.shared
     @ObservedObject var permissionsManager = PermissionsManager.shared
     @ObservedObject var appController = AppController.shared
 
-    @State private var launchAtLogin: Bool
     @State private var diagnostics = ""
-
-    init() {
-        _launchAtLogin = State(initialValue: ConfigStore.shared.launchAtLogin)
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -27,15 +22,40 @@ struct SettingsView: View {
 
             Divider()
 
-            Toggle("Launch at Login", isOn: $launchAtLogin)
-                .onChange(of: launchAtLogin) { _, newValue in
-                    configStore.launchAtLogin = newValue
-                    if newValue {
-                        try? SMAppService.mainApp.register()
-                    } else {
-                        try? SMAppService.mainApp.unregister()
-                    }
+            Toggle("Launch at Login", isOn: Binding(
+                get: { configStore.launchAtLogin },
+                set: { appController.setLaunchAtLogin($0) }
+            ))
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Trigger Shortcut")
+                    .font(.headline)
+
+                Picker("Modifier Key", selection: $configStore.triggerModifier) {
+                    Text("Click (None)").tag("None")
+                    Text("Option + Click").tag("Option")
+                    Text("Command + Click").tag("Command")
+                    Text("Control + Click").tag("Control")
+                    Text("Shift + Click").tag("Shift")
                 }
+                .pickerStyle(.radioGroup)
+            }
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Excluded Applications")
+                    .font(.headline)
+                
+                Text("Comma-separated bundle IDs of apps that should not be toggled:")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                TextField("e.g. com.apple.finder, com.apple.mail", text: $configStore.excludedBundleIDs)
+                    .textFieldStyle(.roundedBorder)
+            }
 
             Divider()
 
@@ -44,11 +64,18 @@ struct SettingsView: View {
             Divider()
 
             HStack {
-                Text("Status: \(appController.isEngineRunning ? "Running" : "Stopped")")
+                Text("Status: \(appController.statusMessage)")
                     .foregroundColor(appController.isEngineRunning ? .green : .red)
                 Spacer()
                 Button("Refresh Log") {
                     diagnostics = loadLog()
+                }
+                Button("Clear") {
+                    DebugLog.shared.clear()
+                    diagnostics = loadLog()
+                }
+                Button("Open") {
+                    NSWorkspace.shared.activateFileViewerSelecting([DebugLog.shared.url])
                 }
             }
 
@@ -74,18 +101,14 @@ struct SettingsView: View {
             }
         }
         .padding(20)
-        .frame(width: 360)
+        .frame(minWidth: 520, idealWidth: 520, minHeight: 520)
         .onAppear {
+            permissionsManager.checkPermissions()
             diagnostics = loadLog()
         }
     }
 
     private func loadLog() -> String {
-        guard let content = try? String(contentsOfFile: "/tmp/docktoggle.log", encoding: .utf8) else {
-            return "Log file not found at /tmp/docktoggle.log\n\nClick 'Refresh Log' after clicking some Dock icons."
-        }
-        let lines = content.components(separatedBy: "\n")
-        let tail = lines.suffix(30)
-        return tail.joined(separator: "\n")
+        DebugLog.shared.recentLines()
     }
 }
