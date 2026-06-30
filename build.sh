@@ -29,6 +29,25 @@ else
     SDK_FLAGS=""
 fi
 
+# Locate SwiftUI macros plugin which is often missing in CommandLineTools
+PLUGIN_PATH=""
+for path in \
+    "$(xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins" \
+    "$(xcode-select -p)/usr/lib/swift/host/plugins" \
+    "$(dirname $(xcrun -f swiftc) 2>/dev/null)/../lib/swift/host/plugins" \
+    "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/swift/host/plugins" \
+    "/Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/swift/host/plugins"
+do
+    if [ -n "$path" ] && [ -d "$path" ] && [ -f "$path/libSwiftUIMacros.dylib" ]; then
+        PLUGIN_PATH="$path"
+        break
+    fi
+done
+
+if [ -n "$PLUGIN_PATH" ]; then
+    SDK_FLAGS="$SDK_FLAGS -plugin-path $PLUGIN_PATH"
+fi
+
 COMMON_FLAGS="$SDK_FLAGS \
     -framework SwiftUI \
     -framework AppKit \
@@ -52,7 +71,6 @@ declare -a ARCH_BINS=()
 for TARGET in "${TARGETS[@]}"; do
     ARCH_NAME="${TARGET%%-*}"
     ARCH_BIN="$BUILD_DIR/$APP_NAME.$ARCH_NAME"
-    ARCH_BINS+=("$ARCH_BIN")
 
     echo "  → Compiling for $ARCH_NAME ..."
     swiftc \
@@ -64,6 +82,7 @@ for TARGET in "${TARGETS[@]}"; do
             rm -f "$ARCH_BIN"
             continue
         }
+    ARCH_BINS+=("$ARCH_BIN")
 done
 
 if [ ${#ARCH_BINS[@]} -ge 2 ] && [ -f "${ARCH_BINS[0]}" ] && [ -f "${ARCH_BINS[1]}" ]; then
