@@ -20,8 +20,37 @@ final class AppController: ObservableObject {
     private var launchObserver: NSObjectProtocol?
     private var terminateObserver: NSObjectProtocol?
     private var screenObserver: NSObjectProtocol?
+    private var activeObserver: NSObjectProtocol?
+    private var defaultsObserver: NSObjectProtocol?
 
-    private init() {}
+    private init() {
+        activeObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.onAppBecameActive()
+            }
+        }
+        defaultsObserver = NotificationCenter.default.addObserver(
+            forName: UserDefaults.didChangeNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            EventTapEngine.shared.refreshSnapshot()
+        }
+    }
+
+    func onAppBecameActive() {
+        PermissionsManager.shared.checkPermissions()
+        let granted = PermissionsManager.shared.allGranted
+        showPermissionsWarning = !granted
+        if granted && !isEngineRunning {
+            startEngine()
+            startMonitorTimer(interval: 30.0)
+        }
+    }
 
     func startIfPermitted() {
         DebugLog.shared.write("[APP] startIfPermitted called")
@@ -51,16 +80,8 @@ final class AppController: ObservableObject {
             return
         }
 
-        guard let frame = DockInspector.shared.cachedGlobalDockFrame else {
-            statusMessage = "Dock frame unavailable"
-            appLog.error("Dock frame is nil after resolve")
-            return
-        }
-
-        appLog.info("Dock frame: \(String(describing: frame))")
-
-        engineThread = Thread {
-            EventTapEngine.shared.start { [weak self] success in
+        engineThread = Thread { [weak self] in
+            EventTapEngine.shared.start { success in
                 DispatchQueue.main.async {
                     guard let self = self else { return }
                     if success {
@@ -76,6 +97,7 @@ final class AppController: ObservableObject {
                         ) { _ in
                             DockInspector.shared.refreshFrame()
                             DockIconCache.shared.refresh()
+                            EventTapEngine.shared.refreshSnapshot()
                         }
 
                         // Setup Workspace notifications for event-driven updates
@@ -122,7 +144,7 @@ final class AppController: ObservableObject {
                 }
             }
             
-            DispatchQueue.main.async { [weak self] in
+            DispatchQueue.main.async {
                 self?.isEngineRunning = false
                 if self?.statusMessage == "Running" {
                     self?.statusMessage = "Event tap stopped"
@@ -164,6 +186,14 @@ final class AppController: ObservableObject {
             NotificationCenter.default.removeObserver(observer)
             screenObserver = nil
         }
+        if let observer = activeObserver {
+            NotificationCenter.default.removeObserver(observer)
+            activeObserver = nil
+        }
+        if let observer = defaultsObserver {
+            NotificationCenter.default.removeObserver(observer)
+            defaultsObserver = nil
+        }
 
         EventTapEngine.shared.stop()
         engineThread = nil
@@ -179,10 +209,10 @@ final class AppController: ObservableObject {
             } else {
                 try SMAppService.mainApp.unregister()
             }
-            ConfigStore.shared.launchAtLogin = enabled
+            ConfigStore.shared.updateLaunchAtLoginStatus()
             DebugLog.shared.write("[APP] launchAtLogin=\(enabled)")
         } catch {
-            ConfigStore.shared.launchAtLogin = !enabled
+            ConfigStore.shared.updateLaunchAtLoginStatus()
             statusMessage = "Login item failed"
             DebugLog.shared.write("[APP] launchAtLogin failed: \(error.localizedDescription)")
         }
@@ -214,8 +244,8 @@ final class AppController: ObservableObject {
                     self.startMonitorTimer(interval: 30.0)
                 } else if !granted {
                     self.statusMessage = "Permissions needed"
-                    if interval != 2.0 {
-                        self.startMonitorTimer(interval: 2.0)
+                    if interval != 10.0 {
+                        self.startMonitorTimer(interval: 10.0)
                     }
                 }
             }
@@ -239,7 +269,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 struct DockToggleApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @ObservedObject var appController = AppController.shared
-    @AppStorage("behaviorMode") private var behaviorMode: BehaviorMode = .hide
+    @ObservedObject var configStore = ConfigStore.shared
 
     var body: some Scene {
         MenuBarExtra("DockToggle", systemImage: "dock.rectangle") {
@@ -258,7 +288,7 @@ struct DockToggleApp: App {
 
                 Divider()
 
-                Picker("Mode", selection: $behaviorMode) {
+                Picker("Mode", selection: $configStore.behaviorMode) {
                     ForEach(BehaviorMode.allCases, id: \.self) { mode in
                         Text(mode.displayName).tag(mode)
                     }
@@ -266,7 +296,7 @@ struct DockToggleApp: App {
                 .pickerStyle(.inline)
 
                 Toggle("Launch at Login", isOn: Binding(
-                    get: { ConfigStore.shared.launchAtLogin },
+                    get: { configStore.launchAtLogin },
                     set: { newValue in
                         AppController.shared.setLaunchAtLogin(newValue)
                     }
@@ -294,6 +324,9 @@ struct DockToggleApp: App {
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .frame(minWidth: 260)
+            .onAppear {
+                configStore.updateLaunchAtLoginStatus()
+            }
         }
     }
 }

@@ -7,10 +7,15 @@ struct SettingsView: View {
     @ObservedObject var appController = AppController.shared
 
     @State private var diagnostics = ""
+    
+    private var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Behavior Mode")
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Behavior Mode")
                 .font(.headline)
 
             Picker("Mode", selection: $configStore.behaviorMode) {
@@ -80,18 +85,18 @@ struct SettingsView: View {
             }
 
             if !diagnostics.isEmpty {
-                ScrollView {
-                    Text(diagnostics)
-                        .font(.system(.caption, design: .monospaced))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .frame(height: 200)
+                Text(diagnostics)
+                    .font(.system(.caption, design: .monospaced))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(8)
+                    .background(Color(NSColor.textBackgroundColor).opacity(0.5))
+                    .cornerRadius(4)
             }
 
             Divider()
 
             HStack {
-                Text("Version 1.0.0")
+                Text("Version \(appVersion)")
                     .font(.caption)
                     .foregroundColor(.secondary)
                 Spacer()
@@ -101,9 +106,11 @@ struct SettingsView: View {
             }
         }
         .padding(20)
-        .frame(minWidth: 520, idealWidth: 520, minHeight: 520)
+        }
+        .frame(minWidth: 520, idealWidth: 520, minHeight: 520, maxHeight: 800)
         .onAppear {
             permissionsManager.checkPermissions()
+            configStore.updateLaunchAtLoginStatus()
             diagnostics = loadLog()
         }
     }
