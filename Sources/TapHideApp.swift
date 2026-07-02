@@ -3,7 +3,7 @@ import AppKit
 import ServiceManagement
 import OSLog
 
-let appLog = Logger(subsystem: "com.docktoggle", category: "App")
+let appLog = Logger(subsystem: "com.taphide", category: "App")
 
 @MainActor
 final class AppController: ObservableObject {
@@ -156,7 +156,7 @@ final class AppController: ObservableObject {
                 self?.engineThread = nil
             }
         }
-        engineThread?.name = "com.docktoggle.eventtap"
+        engineThread?.name = "com.taphide.eventtap"
         engineThread?.start()
     }
 
@@ -270,16 +270,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 @main
-struct DockToggleApp: App {
+struct TapHideApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @ObservedObject var appController = AppController.shared
     @ObservedObject var configStore = ConfigStore.shared
 
     var body: some Scene {
-        MenuBarExtra("DockToggle", systemImage: "dock.rectangle") {
+        MenuBarExtra("TapHide", systemImage: "dock.rectangle") {
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text("DockToggle")
+                    Text("TapHide")
                         .font(.headline)
                     Spacer()
                     Circle()

@@ -100,7 +100,7 @@ struct SettingsView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
                 Spacer()
-                Button("Quit DockToggle") {
+                Button("Quit TapHide") {
                     NSApplication.shared.terminate(nil)
                 }
             }

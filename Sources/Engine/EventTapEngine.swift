@@ -4,7 +4,7 @@ import OSLog
 
 final class EventTapEngine {
     static let shared = EventTapEngine()
-    private let log = Logger(subsystem: "com.docktoggle", category: "EventTap")
+    private let log = Logger(subsystem: "com.taphide", category: "EventTap")
 
     private var _eventTap: CFMachPort?
     private var _runLoop: CFRunLoop?

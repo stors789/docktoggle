@@ -5,7 +5,7 @@ PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SOURCES_DIR="$PROJECT_DIR/Sources"
 RESOURCES_DIR="$PROJECT_DIR/Resources"
 BUILD_DIR="$PROJECT_DIR/.build"
-APP_NAME="DockToggle"
+APP_NAME="TapHide"
 APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
 EXECUTABLE="$BUILD_DIR/$APP_NAME"
 
@@ -61,7 +61,7 @@ mkdir -p "$BUILD_DIR"
 
 SWIFT_FILES=$(find "$SOURCES_DIR" -name "*.swift" | sort)
 
-echo "=== Compiling DockToggle ==="
+echo "=== Compiling TapHide ==="
 echo "Native arch: $NATIVE_ARCH"
 echo "SDK: $SDK_PATH"
 echo "Targets: ${TARGETS[*]}"
@@ -103,7 +103,7 @@ mkdir -p "$APP_BUNDLE/Contents/Resources"
 
 cp "$EXECUTABLE" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 cp "$RESOURCES_DIR/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
-cp "$RESOURCES_DIR/DockToggle.icns" "$APP_BUNDLE/Contents/Resources/DockToggle.icns"
+cp "$RESOURCES_DIR/TapHide.icns" "$APP_BUNDLE/Contents/Resources/TapHide.icns"
 
 echo -n 'APPL????' > "$APP_BUNDLE/Contents/PkgInfo"
 

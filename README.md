@@ -8,10 +8,10 @@
 </p>
 
 <p align="center">
-  <img src="icon.png" width="128" alt="DockToggle Icon">
+  <img src="icon.png" width="128" alt="TapHide Icon">
 </p>
 
-# DockToggle
+# TapHide
 
 Turn your Dock into a toggle switch. Click a running app's icon to focus it &mdash; click it again to **hide** or **minimize**.
 
@@ -47,9 +47,9 @@ Turn your Dock into a toggle switch. Click a running app's icon to focus it &mda
               └─────────────────┘
 ```
 
-DockToggle installs a `CGEvent` tap that intercepts left mouse clicks. When you click inside the Dock area on an already-frontmost app's icon, the click is swallowed and your chosen action (hide or minimize) is executed instead.
+TapHide installs a `CGEvent` tap that intercepts left mouse clicks. When you click inside the Dock area on an already-frontmost app's icon, the click is swallowed and your chosen action (hide or minimize) is executed instead.
 
-DockToggle is intentionally closer to a lightweight Dock enhancement such as HyperDock-style shortcuts than a full Dock replacement such as uBar. It keeps Apple's Dock visible and only changes the repeated-click behavior for the active app.
+TapHide is intentionally closer to a lightweight Dock enhancement such as HyperDock-style shortcuts than a full Dock replacement such as uBar. It keeps Apple's Dock visible and only changes the repeated-click behavior for the active app.
 
 ### Two Modes
 
@@ -66,30 +66,30 @@ DockToggle is intentionally closer to a lightweight Dock enhancement such as Hyp
 
 ```bash
 brew tap stors789/tap
-brew install --cask docktoggle
+brew install --cask taphide
 ```
 
 ### From Source
 
 ```bash
 # 1. Clone
-git clone https://github.com/stors789/docktoggle.git
-cd docktoggle
+git clone https://github.com/stors789/taphide.git
+cd taphide
 
 # 2. Build (requires Xcode Command Line Tools)
 ./build.sh
 
 # 3. Move to Applications (important for permissions)
-mv .build/DockToggle.app /Applications/
+mv .build/TapHide.app /Applications/
 
 # 4. Launch
-open /Applications/DockToggle.app
+open /Applications/TapHide.app
 ```
 
 **First launch:** Right-click the app and select *Open* to bypass Gatekeeper, or run:
 
 ```bash
-xattr -cr /Applications/DockToggle.app
+xattr -cr /Applications/TapHide.app
 ```
 
 Then grant the two permissions in **System Settings → Privacy & Security**.
@@ -106,7 +106,7 @@ Then grant the two permissions in **System Settings → Privacy & Security**.
 
 ## Permissions
 
-DockToggle needs two permissions — both must be granted for the app to work.
+TapHide needs two permissions — both must be granted for the app to work.
 
 | Permission | Why It's Needed |
 |---|---|
@@ -115,12 +115,12 @@ DockToggle needs two permissions — both must be granted for the app to work.
 
 ### Setup Steps
 
-1. Launch DockToggle — it will show a red "Permissions Needed" badge
-2. Go to **System Settings → Privacy & Security → Accessibility**, toggle DockToggle **ON**
-3. Go to **System Settings → Privacy & Security → Input Monitoring**, toggle DockToggle **ON**
-4. Keep the Settings window open for a few seconds, or quit and reopen DockToggle — the status dot should turn green
+1. Launch TapHide — it will show a red "Permissions Needed" badge
+2. Go to **System Settings → Privacy & Security → Accessibility**, toggle TapHide **ON**
+3. Go to **System Settings → Privacy & Security → Input Monitoring**, toggle TapHide **ON**
+4. Keep the Settings window open for a few seconds, or quit and reopen TapHide — the status dot should turn green
 
-> **Troubleshooting:** If it still doesn't work after granting both, remove DockToggle from both lists, quit the app, then re-add and re-launch.
+> **Troubleshooting:** If it still doesn't work after granting both, remove TapHide from both lists, quit the app, then re-add and re-launch.
 
 ---
 
@@ -128,8 +128,8 @@ DockToggle needs two permissions — both must be granted for the app to work.
 
 ```
 Sources/
-├── DockToggleApp.swift              # @main entry, menubar UI, lifecycle
-├── DebugLog.swift                   # File-based logging under ~/Library/Logs/DockToggle
+├── TapHideApp.swift              # @main entry, menubar UI, lifecycle
+├── DebugLog.swift                   # File-based logging under ~/Library/Logs/TapHide
 ├── SettingsView.swift               # Settings window content
 ├── SettingsWindowManager.swift      # NSWindow management
 ├── Engine/
@@ -154,13 +154,13 @@ Built as a single Swift executable bundled into a `.app` — no Xcode project, n
 
 ## Debugging
 
-Logs are written to `~/Library/Logs/DockToggle/docktoggle.log`. You can tail them live:
+Logs are written to `~/Library/Logs/TapHide/taphide.log`. You can tail them live:
 
 ```bash
-tail -f ~/Library/Logs/DockToggle/docktoggle.log
+tail -f ~/Library/Logs/TapHide/taphide.log
 ```
 
-The Settings window can also refresh, clear, or reveal the log file in Finder. Logs rotate to `docktoggle.old.log` after roughly 1 MB.
+The Settings window can also refresh, clear, or reveal the log file in Finder. Logs rotate to `taphide.old.log` after roughly 1 MB.
 
 Useful entries:
 
@@ -176,7 +176,7 @@ Useful entries:
 
 ## Known Limits
 
-- DockToggle depends on macOS Accessibility metadata. Some apps expose incomplete window information, so minimize mode may fall back to hide.
+- TapHide depends on macOS Accessibility metadata. Some apps expose incomplete window information, so minimize mode may fall back to hide.
 - Finder and Dock are ignored as protected targets.
 - Full-screen apps, multiple Spaces, and Stage Manager can still affect which window macOS considers focused.
 - Input Monitoring changes may require restarting the app if macOS does not deliver the permission update immediately.

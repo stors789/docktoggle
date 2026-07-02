@@ -5,15 +5,15 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleExecutable</key>
-    <string>DockToggle</string>
+    <string>TapHide</string>
     <key>CFBundleIdentifier</key>
-    <string>com.docktoggle.app</string>
+    <string>com.taphide.app</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>DockToggle</string>
+    <string>TapHide</string>
     <key>CFBundleIconFile</key>
-    <string>DockToggle</string>
+    <string>TapHide</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -27,8 +27,8 @@
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSAccessibilityUsageDescription</key>
-    <string>DockToggle uses Accessibility to identify Dock icons and control application windows.</string>
+    <string>TapHide uses Accessibility to identify Dock icons and control application windows.</string>
     <key>NSInputMonitoringUsageDescription</key>
-    <string>DockToggle needs to detect mouse clicks to provide Dock icon toggle functionality.</string>
+    <string>TapHide needs to detect mouse clicks to provide Dock icon toggle functionality.</string>
 </dict>
 </plist>

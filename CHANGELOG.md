@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to DockToggle are tracked here.
+All notable changes to TapHide are tracked here.
 
 ## Unreleased
 
@@ -16,7 +16,7 @@ All notable changes to DockToggle are tracked here.
 
 ### Changed
 
-- Move debug logs from `/tmp/docktoggle.log` to `~/Library/Logs/DockToggle/docktoggle.log`.
+- Move debug logs from `/tmp/taphide.log` to `~/Library/Logs/TapHide/taphide.log`.
 - Add log rotation at roughly 1 MB.
 - Expand Settings with status text plus refresh, clear, and reveal-log actions.
 - Document current limitations, log prefixes, and maintenance workflow.

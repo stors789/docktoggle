@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Generate DockToggle app icons from the approved source artwork."""
+"""Generate TapHide app icons from the approved source artwork."""
 
 from pathlib import Path
 from PIL import Image
 
 PROJECT = Path(__file__).resolve().parent
 RESOURCES = PROJECT / "Resources"
-SOURCE = RESOURCES / "DockToggleSource.png"
-ICONSET = RESOURCES / "DockToggle.iconset"
-ICNS = RESOURCES / "DockToggle.icns"
+SOURCE = RESOURCES / "TapHideSource.png"
+ICONSET = RESOURCES / "TapHide.iconset"
+ICNS = RESOURCES / "TapHide.icns"
 README_PREVIEW = PROJECT / "icon.png"
 
 SIZES = {

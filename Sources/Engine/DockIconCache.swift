@@ -11,7 +11,7 @@ struct DockIconEntry {
 final class DockIconCache {
     static let shared = DockIconCache()
 
-    private let log = Logger(subsystem: "com.docktoggle", category: "DockIconCache")
+    private let log = Logger(subsystem: "com.taphide", category: "DockIconCache")
     private let lock = NSLock()
     private var entries: [DockIconEntry] = []
 

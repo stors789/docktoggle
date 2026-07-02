@@ -5,14 +5,14 @@ import OSLog
 
 final class DockInspector {
     static let shared = DockInspector()
-    private let log = Logger(subsystem: "com.docktoggle", category: "DockInspector")
+    private let log = Logger(subsystem: "com.taphide", category: "DockInspector")
 
     private var dockPID: pid_t = 0
     private var dockAppElement: AXUIElement?
 
     private var _cachedFrame: CGRect?
     private let frameQueue = DispatchQueue(
-        label: "com.docktoggle.dockframe",
+        label: "com.taphide.dockframe",
         attributes: .concurrent
     )
 

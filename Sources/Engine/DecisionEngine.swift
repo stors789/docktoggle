@@ -4,7 +4,7 @@ import OSLog
 
 final class DecisionEngine {
     static let shared = DecisionEngine()
-    private let log = Logger(subsystem: "com.docktoggle", category: "Decision")
+    private let log = Logger(subsystem: "com.taphide", category: "Decision")
 
     private init() {}
 

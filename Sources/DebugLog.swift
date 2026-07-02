@@ -4,23 +4,23 @@ import os
 final class DebugLog {
     static let shared = DebugLog()
     let url: URL
-    private let queue = DispatchQueue(label: "com.docktoggle.debuglog")
+    private let queue = DispatchQueue(label: "com.taphide.debuglog")
     private var fileHandle: FileHandle?
     
     // Buffering & Logger variables
     private var buffer: [String] = []
     private let maxBufferSize = 50
     private var timer: DispatchSourceTimer?
-    private let logger = Logger(subsystem: "com.docktoggle", category: "DebugLog")
+    private let logger = Logger(subsystem: "com.taphide", category: "DebugLog")
 
     private init() {
         let logsDirectory = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Logs/DockToggle", isDirectory: true)
+            .appendingPathComponent("Library/Logs/TapHide", isDirectory: true)
         try? FileManager.default.createDirectory(
             at: logsDirectory,
             withIntermediateDirectories: true
         )
-        url = logsDirectory.appendingPathComponent("docktoggle.log")
+        url = logsDirectory.appendingPathComponent("taphide.log")
         rotateIfNeeded()
         fileHandle = try? FileHandle(forWritingTo: url)
         if fileHandle == nil {
@@ -30,7 +30,7 @@ final class DebugLog {
         fileHandle?.seekToEndOfFile()
         
         setupTimer()
-        write("=== DockToggle \(Date()) ===")
+        write("=== TapHide \(Date()) ===")
     }
 
     private func setupTimer() {
@@ -94,7 +94,7 @@ final class DebugLog {
             try? fileHandle?.truncate(atOffset: 0)
             try? fileHandle?.synchronize()
         }
-        write("=== DockToggle log cleared \(Date()) ===")
+        write("=== TapHide log cleared \(Date()) ===")
     }
 
     private func rotateIfNeeded() {

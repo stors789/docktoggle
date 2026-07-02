@@ -2,12 +2,12 @@
 
 ## High Priority
 
-- Fix the build pipeline so `./build.sh` reliably produces `.build/DockToggle.app`.
+- Fix the build pipeline so `./build.sh` reliably produces `.build/TapHide.app`.
 - Make event tap startup deterministic instead of relying on a short sleep before checking tap state.
 - Validate cached Dock icon hits with live AX hit testing before swallowing clicks.
 - Fix Dock coordinate handling for multiple displays and non-primary Dock placement.
 - Fix the icon export pipeline. The current "Focus Then Hide" source artwork is clear, but the resized iconset/`.icns` output appears blurry at app-icon sizes.
-- Test DockToggle across Dock positions: bottom, left, and right.
+- Test TapHide across Dock positions: bottom, left, and right.
 - Test with Dock magnification enabled and disabled.
 - Verify behavior with multiple displays and different primary-display settings.
 - Exercise common edge cases: full-screen apps, minimized-only apps, apps with no normal windows, and apps with helper processes.
