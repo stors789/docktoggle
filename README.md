@@ -134,7 +134,6 @@ Sources/
 ├── SettingsWindowManager.swift      # NSWindow management
 ├── Engine/
 │   ├── EventTapEngine.swift         # Core: CGEvent tap + click interception
-│   ├── DecisionEngine.swift         # Earlier hit-test path kept for comparison
 │   ├── ActionExecutor.swift         # Hide / minimize via AppKit + AX APIs
 │   ├── DockInspector.swift          # Dock process resolution, frame detection
 │   ├── DockIconCache.swift          # Icon position/PID cache (30s fallback + app/screen events)

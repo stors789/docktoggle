@@ -1,5 +1,4 @@
 .DS_Store
 .build/
 __pycache__/
-Resources/TapHide.iconset/
-icon-preview.html
+.superpowers/
