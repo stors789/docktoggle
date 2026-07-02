@@ -31,9 +31,12 @@ struct DockAppExtractor {
     
     private static func getAXURLString(from element: AXUIElement) -> String? {
         var axURL: CFTypeRef?
-        if AXUIElementCopyAttributeValue(element, "AXURL" as CFString, &axURL) == .success,
-           let urlStr = axURL as? String {
-            return urlStr
+        if AXUIElementCopyAttributeValue(element, "AXURL" as CFString, &axURL) == .success {
+            if let url = axURL as? URL {
+                return url.absoluteString
+            } else if let urlStr = axURL as? String {
+                return urlStr
+            }
         }
         return nil
     }
