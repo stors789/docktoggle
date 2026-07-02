@@ -1,14 +1,13 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/platform-macOS%2014.0%2B-blue" alt="Platform">
-  <img src="https://img.shields.io/badge/arch-arm64%20%7C%20x86__64-brightgreen" alt="Architecture">
-  <img src="https://img.shields.io/badge/license-GPL--3.0-green" alt="License">
-  <img src="https://img.shields.io/badge/built%20by-DeepSeek%20v4%20Pro%20%2B%20OpenCode-purple" alt="Built by">
-  <br>
-  <a href="README_CN.md"><img src="https://img.shields.io/badge/readme-%E4%B8%AD%E6%96%87%20%7C%20Chinese-red?style=flat-square" alt="中文文档"></a>
+  <img src="./icon.png" width="168" height="168" alt="TapHide app icon">
 </p>
 
 <p align="center">
-  <img src="icon.png" width="128" alt="TapHide Icon">
+  <img src="https://img.shields.io/badge/platform-macOS%2014.0%2B-blue" alt="Platform">
+  <img src="https://img.shields.io/badge/arch-arm64%20%7C%20x86__64-brightgreen" alt="Architecture">
+  <img src="https://img.shields.io/badge/license-GPL--3.0-green" alt="License">
+  <br>
+  <a href="README_CN.md"><img src="https://img.shields.io/badge/readme-%E4%B8%AD%E6%96%87%20%7C%20Chinese-red?style=flat-square" alt="中文文档"></a>
 </p>
 
 # TapHide

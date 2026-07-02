@@ -2,6 +2,12 @@
 
 All notable changes to TapHide are tracked here.
 
+## 2.0.1 (2026-07-02)
+
+### Changed
+- Updated the README hero to use the latest TapHide app icon.
+- Cleaned unused planning documents, icon generation sources, and the obsolete decision engine path from the repository.
+
 ## 2.0.0 (2026-07-02)
 
 ### Changed
